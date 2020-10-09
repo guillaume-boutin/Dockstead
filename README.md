@@ -28,17 +28,17 @@ Copy `docker-compose.original.yaml` to `docker-compose.yaml` run `docker-compose
 
 ## Project setup
 
-Inside `nginx/sites` folder, copy the  `scanner.conf.example` to `scanner.conf` then change `${PROJECT_PATH}` to the path of the project relative to your `${CODE_PATH}`, `${SERVER_NAME}` (say, `example.wip`) to the domain you want to use and `${PHP_VERSION}` to the version you want the project to run on.
+Inside `nginx/sites` folder, copy the  `laravel.conf.example` to `example.conf` (or whichever project-related name) then change `${PROJECT_PATH}` to the path of the project relative to your `${CODE_PATH}`, `${SERVER_NAME}` (say, `example.wip`) to the domain you want to use and `${PHP_VERSION}` to the version you want the project to run on (with the dot in-between).
 
 In you local `/etc/hosts` file add that doamain with the IP of the nginx container:
 ```
 10.10.10.80 example.wip
 ```
-If for some reason you can't have a running local network for Docker, you can still use the containers on localhost through the `NGINX_PORT`. Just add your domain to localhost in your hosts file
+If for some reason you can't have a running local network for Docker, or don't want to, you can still use the containers on localhost through the `NGINX_PORT`. Just add your domain to localhost in your hosts file
 ```
 127.0.0.1 example.wip
 ```
-and your project will be available on `example.wip:1080`. You can edit the `NGINX_PORT` in  `.env` file.
+and your project will be available on `example.wip:1080`. You can edit the `NGINX_PORT` in  `.env` file. Of course, you can use `NGINX_PORT=80` if you have nothing running on it already.
 
 In the `.env` file of the project, change some variables for mysql connection for the following ones
 
@@ -59,7 +59,7 @@ Once the build of the images are done, run `docker-compose up -d` to start your 
 
 Once all containers are up, ssh into the workspace by running `docker-compose -u dockstead workspace bash` (pretty long command, we will remedy to that). Inside of the container, you should be in folder `~/code` which is directly mapped to the `${CODE_PATH}` you set up for where your projects are. You can then list your project folders by running `ll` to checkk if you mapped it correctly.
 
-If you `cd` into one of your projects, you can then use the usual `artisan`, `composer`, `npm` and such.
+If you `cd` into one of your projects, you can then use the usual `artisan`, `composer`, `npm` and such. You can also check `php -v` for the `WORKSPACE_PHP_VERSION` you put.
 
 ## Aliases
 
@@ -104,7 +104,7 @@ In your project folder, create `.vscode/launch.json` and add the following confi
     "configurations": [
         {
             "log": true,
-            "name": "XDebug for docker-scanner",
+            "name": "XDebug for dockstead",
             "type": "php",
             "request": "launch",
             "port": 9001,
