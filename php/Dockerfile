@@ -12,16 +12,7 @@ RUN docker-php-ext-install bcmath
 RUN docker-php-ext-install mysqli
 
 # xdebug
-RUN if [ $(php -r "echo PHP_MAJOR_VERSION;") = "5" ]; then \
-    pecl install xdebug-2.5.5; \
-else \
-    if [ $(php -r "echo PHP_MINOR_VERSION;") = "0" ]; then \
-        pecl install xdebug-2.9.0; \
-    else \
-        pecl install xdebug; \
-    fi \
-fi && \
-docker-php-ext-enable xdebug
+RUN pecl install xdebug-3.0.0
 
 # # python3
 # RUN apt-get update && apt-get -y upgrade && \
@@ -34,6 +25,9 @@ RUN echo "file_uploads = On" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "memory_limit = 100M" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "upload_max_filesize = 100M" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "post_max_size = 100M" >> /usr/local/etc/php/conf.d/uploads.ini
+
+# output buffering
+RUN echo "output_buffering = On" >> /usr/local/etc/php/conf.d/output-buffering.ini
 
 # # swoole
 # RUN { \

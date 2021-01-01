@@ -28,9 +28,9 @@ RUN echo 'DPkg::options { "--force-confdef"; };' >> /etc/apt/apt.conf
 RUN apt-add-repository -y ppa:ondrej/php
 
 # Install "PHP Extentions", "libraries", "Software's"
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --allow-downgrades --allow-remove-essential \
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install -y --allow-downgrades --allow-remove-essential \
         --allow-change-held-packages \
         php-imagick \
         pkg-config \
@@ -61,13 +61,20 @@ RUN apt-get update && \
     && apt-get clean
 
 ARG PHP_VERSION=7.4
-ENV PHP_VERSION ${PHP_VERSION}
+
+# install PHP 7.4
+COPY install_php7.4.sh ./install/install_php7.4.sh
+RUN chmod 775 ./install/install_php7.4.sh
+RUN ./install/install_php7.4.sh
+RUN rm ./install/install_php7.4.sh
+
+ARG PHP_VERSION=8.0
 
 # install PHP ${PHP_VERSION}
-COPY install_php${PHP_VERSION}.sh ./install/install_php${PHP_VERSION}.sh
-RUN chmod 775 ./install/install_php${PHP_VERSION}.sh
-RUN ./install/install_php${PHP_VERSION}.sh
-RUN rm ./install/install_php${PHP_VERSION}.sh
+COPY install_php8.0.sh ./install/install_php8.0.sh
+RUN chmod 775 ./install/install_php8.0.sh
+RUN ./install/install_php8.0.sh
+RUN rm ./install/install_php8.0.sh
 
 # # install PHP 7.2
 # COPY install_php7.2.sh ./install/install_php7.2.sh
@@ -88,7 +95,7 @@ RUN rm ./install/install_php${PHP_VERSION}.sh
 # RUN rm ./install/install_php7.4.sh
 
 # set PHP ${PHP_VERSION} as default
-RUN update-alternatives --set php /usr/bin/php${PHP_VERSION}
+RUN update-alternatives --set php /usr/bin/php8.0
 
 # install sudo
 RUN apt-get install -y sudo && \
@@ -108,11 +115,12 @@ USER ${WORKSPACE_USER}
 RUN composer global require laravel/installer
 # install symfony
 RUN wget https://get.symfony.com/cli/installer -O - | bash
-RUN sudo mv /home/dockstead/.symfony/bin/symfony /usr/local/bin/symfony
+RUN sudo mv ~/.symfony/bin/symfony /usr/local/bin/symphony
+
 #install phpunit
 RUN composer global require phpunit/phpunit
 
-RUN echo 'PATH="$HOME/.composer/vendor/bin:$PATH"' >> /home/${WORKSPACE_USER}/.bashrc
+RUN echo 'export PATH="$HOME/.composer/vendor/bin:$PATH"' >> /home/${WORKSPACE_USER}/.bashrc
 
 # install nodejs
 ARG INSTALL_NODE=true
@@ -145,7 +153,10 @@ RUN if [ ${INSTALL_NODE} = true ]; then \
         && if [ ${INSTALL_NPM_ANGULAR_CLI} = true ]; then \
         npm install -g @angular/cli \
         ;fi \
+        && if [ ${INSTALL_NPM_TSC} = true ]; then \
+        npm install -g typescript \
         && ln -s `npm bin --global` /home/${WORKSPACE_USER}/.node-bin \
+        ;fi \
 ;fi
 
 # Wouldn't execute when added to the RUN statement in the above block
@@ -166,11 +177,13 @@ RUN if [ ${INSTALL_NODE} = true ]; then \
 ;fi
 
 # Add PATH for node
-ENV PATH $PATH:/home/${WORKSPACE_USER}/.node-bin
+# ENV PATH $PATH:/home/${WORKSPACE_USER}/.node-bin
+RUN echo 'export PATH="$PATH:/home/${WORKSPACE_USER}/.node-bin"' >> ~/.bashrc
 
 # install yarn
-RUN apt-get install -y yarn && \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y yarn
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends yarn
@@ -178,7 +191,17 @@ RUN apt-get install -y yarn && \
 RUN mkdir /home/${WORKSPACE_USER}/code && \
     chown -R ${WORKSPACE_USER}:${WORKSPACE_USER} /home/${WORKSPACE_USER}/code
 
+# Install Go
+RUN wget https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz
+RUN tar -C /usr/local -xvf go1.15*.gz
+RUN rm go1.15*.gz
+
 USER ${WORKSPACE_USER}
+
+RUN echo "export GOROOT=/usr/local/go" >>  ~/.bashrc
+RUN echo "export GOPATH=$HOME/code/go" >>  ~/.bashrc
+RUN echo 'export PATH="$HOME/code/go/bin:/usr/local/go/bin:$PATH"' >>  ~/.bashrc
+RUN echo "export GO111MODULE=auto" >>  ~/.bashrc
 
 RUN echo "" >> /home/${WORKSPACE_USER}/.bashrc \
     && echo "PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@workspace\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '\n" >> /home/${WORKSPACE_USER}/.bashrc && \
