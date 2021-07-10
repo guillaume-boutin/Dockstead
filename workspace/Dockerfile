@@ -25,8 +25,6 @@ USER root
 ARG PHP_VERSION=${PHP_VERSION}
 RUN echo 'DPkg::options { "--force-confdef"; };' >> /etc/apt/apt.conf
 
-RUN apt-add-repository -y ppa:ondrej/php
-
 # Install "PHP Extentions", "libraries", "Software's"
 RUN apt-get update
 RUN apt-get upgrade -y
@@ -59,6 +57,10 @@ RUN apt-get install -y --allow-downgrades --allow-remove-essential \
         autoconf \
         bison \
     && apt-get clean
+
+RUN apt -y install software-properties-common
+RUN apt-add-repository -y ppa:ondrej/php
+RUN apt-get update
 
 ARG PHP_VERSION=7.4
 
@@ -114,12 +116,17 @@ USER ${WORKSPACE_USER}
 #install laravel installer
 RUN composer global require laravel/installer
 # install symfony
+ARG GIT_USER_NAME
+ARG GIT_USER_EMAIL
+RUN git config --global user.name "$GIT_USER_NAME"
+RUN git config --global user.email "$GIT_USER_EMAIL"
 RUN wget https://get.symfony.com/cli/installer -O - | bash
-RUN sudo mv ~/.symfony/bin/symfony /usr/local/bin/symphony
+RUN sudo mv ~/.symfony/bin/symfony /usr/local/bin/symfony
+#install symfony tls support for https
+RUN symfony server:ca:install
 
 #install phpunit
 RUN composer global require phpunit/phpunit
-
 RUN echo 'export PATH="$HOME/.composer/vendor/bin:$PATH"' >> /home/${WORKSPACE_USER}/.bashrc
 
 # install nodejs
@@ -133,11 +140,12 @@ ENV NVM_DIR /home/${WORKSPACE_USER}/.nvm
 RUN if [ ${INSTALL_NODE} = true ]; then \
     # Install nvm (A Node Version Manager)
     mkdir -p $NVM_DIR && \
-    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash \
         && . $NVM_DIR/nvm.sh \
         && nvm install ${NODE_VERSION} \
         && nvm use ${NODE_VERSION} \
         && nvm alias ${NODE_VERSION} \
+        && nvm install-latest-npm \
         && if [ ${NPM_REGISTRY} ]; then \
         npm config set registry ${NPM_REGISTRY} \
         ;fi \
@@ -181,7 +189,7 @@ RUN if [ ${INSTALL_NODE} = true ]; then \
 RUN echo 'export PATH="$PATH:/home/${WORKSPACE_USER}/.node-bin"' >> ~/.bashrc
 
 # install yarn
-RUN apt-get update && apt-get upgrade -y
+# RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y yarn
 RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
@@ -210,9 +218,11 @@ RUN echo "" >> /home/${WORKSPACE_USER}/.bashrc \
     echo "}\n" >> ~/.bashrc && \
     /bin/bash -c ". /home/$WORKSPACE_USER/.bashrc"
 
-# aliases
+# laravel artisan aliase
 RUN echo "" >> /home/${WORKSPACE_USER}/.bashrc \
     && echo "alias artisan='php artisan'" >> /home/${WORKSPACE_USER}/.bashrc
+# symfony php bin/console alias
+RUN echo "alias concerto='php bin/console'" >> /home/${WORKSPACE_USER}/.bashrc
 
 USER root
 
